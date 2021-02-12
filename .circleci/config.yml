@@ -1,0 +1,69 @@
+version: 2.1
+
+executors:
+
+  python_368:
+    docker:
+      - image: circleci/python:3.6.8-jessie
+
+# re-usable variables
+references:
+
+  deps-cache-key: &deps-cache-key
+                    v6-deps-{{ .Branch }}-{{ checksum "requirements-test.txt" }}
+
+  repo-cache-key: &repo-cache-key
+                    v1-repo-{{ .Branch }}-{{ .Revision }}
+
+  tox-cache-key: &tox-cache-key
+                   v4-tox-{{ checksum "requirements-test.txt" }}
+
+  restore_dependecies: &restore_dependencies
+    restore_cache:
+      keys:
+        - *deps-cache-key
+
+  restore_tox_cache: &restore_tox_cache
+    restore_cache:
+      keys:
+        - *tox-cache-key
+      paths:
+        - .tox
+
+# re-usable steps
+jobs:
+
+  build-n-test:
+    executor: python_368
+    steps:
+      - checkout
+      - save_cache:
+          key: *repo-cache-key
+          paths:
+            - .
+      - *restore_dependencies
+      - run:
+          name: Install Python Dependencies
+          command: |
+            python3 -m venv deps-venv
+            . deps-venv/bin/activate
+            pip install tox
+      - save_cache:
+          key:  *deps-cache-key
+          paths:
+            - "deps-venv"
+      - *restore_tox_cache
+      - run:
+          name: Let's tox it
+          command: |
+            . deps-venv/bin/activate
+            tox
+      - save_cache:
+          key:  *tox-cache-key
+          paths:
+            - ".tox"
+
+workflows:
+  main:
+    jobs:
+      - build-and-test

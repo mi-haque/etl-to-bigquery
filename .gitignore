@@ -24,3 +24,4 @@ coverage.xml
 # IntelliJ file
 .idea/
 *.iml
+.DS_Store
